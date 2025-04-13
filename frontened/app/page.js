@@ -13,7 +13,7 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
-    const res = await fetch('http://alphabet_classifier.railway.internal/predict', {
+    const res = await fetch('https://alphabetclassifier-production.up.railway.app/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: grid }),
