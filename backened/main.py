@@ -8,7 +8,7 @@ from model import f_forward, generate_wt, sigmoid, back_propagation, train, loss
 
 app = FastAPI()
 
-# Allow all origins (CORS setup)
+# CORS middleware to allow frontend access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,42 +17,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Root endpoint to verify backend is running
+# Health check endpoint
 @app.get("/")
-def read_root():
+def root():
     return {"status": "Backend is up and running 🚀"}
 
 # Prepare training data
 x = [np.array(binary).reshape(1, 30) for binary in letters_binary.values()]
 y = np.array([one_hot_labels[chr(i + 65)] for i in range(26)])
 
-# Load or train model weights
+# Load or train weights
 weights_file = "weights.pkl"
-if os.path.exists(weights_file):
-    try:
+saved_accuracy = 0.0
+
+try:
+    if os.path.exists(weights_file):
         data = joblib.load(weights_file)
         if len(data) == 2:
             w1, w2 = data
-            saved_accuracy = 0.0
         else:
             w1, w2, saved_accuracy = data
-    except Exception as e:
-        print(f"Failed to load weights: {e}")
-        w1 = generate_wt(30, 5)
-        w2 = generate_wt(5, 26)
-        w1, w2, accuracy, _ = train(x, y, w1, w2, learning_rate=0.01, epochs=100000)
-        saved_accuracy = accuracy
-        joblib.dump((w1, w2, saved_accuracy), weights_file)
-else:
+    else:
+        raise FileNotFoundError("Weights file not found. Training new model.")
+except Exception as e:
+    print(f"Loading failed: {e} — training model...")
     w1 = generate_wt(30, 5)
     w2 = generate_wt(5, 26)
-    w1, w2, accuracy, _ = train(x, y, w1, w2, learning_rate=0.01, epochs=100000)
-    saved_accuracy = accuracy
+    w1, w2, saved_accuracy, _ = train(x, y, w1, w2, learning_rate=0.01, epochs=100000)
     joblib.dump((w1, w2, saved_accuracy), weights_file)
 
-# Request model
+# Input schema
 class BinaryInput(BaseModel):
-    data: list  # Should contain 30 binary values
+    data: list  # List of 30 binary values
 
 # Prediction endpoint
 @app.post("/predict")
@@ -71,3 +67,8 @@ def predict_letter(input: BinaryInput):
         "probabilities": output.tolist()[0],
         "accuracy": saved_accuracy,
     }
+
+# For Railway to run
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8080)
