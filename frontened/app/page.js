@@ -13,15 +13,21 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
-    const res = await fetch('https://alphabetclassifier-production.up.railway.app/predict', {
-    // const res = await fetch('http://localhost:8000/predict', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: grid }),
-    });
+    try {
+      const res = await fetch('https://alphabetclassifier-production.up.railway.app/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: grid }),
+      });
 
-    const result = await res.json();
-    setPrediction(result.prediction);
+      if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+
+      const result = await res.json();
+      setPrediction(result.prediction);
+    } catch (error) {
+      alert("Error: " + error.message); // This will show error on phone
+      console.error("Fetch error:", error);
+    }
   };
 
   const resetGrid = () => {
