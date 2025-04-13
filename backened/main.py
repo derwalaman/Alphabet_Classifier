@@ -11,11 +11,16 @@ app = FastAPI()
 # Allow all origins (CORS setup)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Root endpoint to verify backend is running
+@app.get("/")
+def read_root():
+    return {"status": "Backend is up and running 🚀"}
 
 # Prepare training data
 x = [np.array(binary).reshape(1, 30) for binary in letters_binary.values()]
