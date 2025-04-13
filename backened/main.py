@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
-from model import f_forward, one_hot_labels, letters_binary
+import model
 from weights import w1, w2, saved_accuracy  # Import pre-trained weights
 
 app = FastAPI()
@@ -24,7 +24,7 @@ def predict_letter(input: BinaryInput):
         raise HTTPException(status_code=400, detail="Input must be 30 binary values")
     
     x_input = np.array(input.data).reshape(1, 30)
-    output = f_forward(x_input, np.array(w1), np.array(w2))
+    output = model.f_forward(x_input, np.array(w1), np.array(w2))
 
     predicted_index = int(np.argmax(output))
     predicted_char = chr(predicted_index + 65)
