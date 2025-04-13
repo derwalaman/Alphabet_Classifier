@@ -2,7 +2,8 @@
 
 This project demonstrates a simple neural network or ML model that recognizes alphabets (A–Z) using their binary visual representations. Each alphabet is encoded as a 5x6 binary matrix (flattened into 30 features), and mapped to a one-hot encoded label.
 
-## 🌐 **Live Demo**: [https://alphabet-classifier.vercel.app](https://alphabet-classifier.vercel.app)
+## 🌐 **Live Demo**
+[https://alphabet-classifier.vercel.app](https://alphabet-classifier.vercel.app)
 
 ## 🧠 Project Structure
 
