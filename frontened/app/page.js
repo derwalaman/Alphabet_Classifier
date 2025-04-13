@@ -5,6 +5,7 @@ import { useState } from 'react';
 export default function Home() {
   const [grid, setGrid] = useState(Array(30).fill(0));
   const [prediction, setPrediction] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const toggleCell = (index) => {
     const updated = [...grid];
@@ -13,6 +14,8 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
+    setLoading(true);
+    setPrediction('');
     try {
       const res = await fetch('https://alphabetclassifier-production.up.railway.app/predict', {
         method: 'POST',
@@ -25,8 +28,10 @@ export default function Home() {
       const result = await res.json();
       setPrediction(result.prediction);
     } catch (error) {
-      alert("Error: " + error.message); // This will show error on phone
+      alert("Error: " + error.message);
       console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,6 +80,7 @@ export default function Home() {
         <div style={{ marginBottom: '1rem' }}>
           <button
             onClick={handleSubmit}
+            disabled={loading}
             style={{
               backgroundColor: '#10b981',
               color: '#fff',
@@ -84,13 +90,15 @@ export default function Home() {
               border: 'none',
               fontWeight: '600',
               fontSize: '1rem',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
             }}
           >
-            Predict
+            {loading ? 'Predicting...' : 'Predict'}
           </button>
           <button
             onClick={resetGrid}
+            disabled={loading}
             style={{
               backgroundColor: '#ef4444',
               color: '#fff',
@@ -99,14 +107,22 @@ export default function Home() {
               border: 'none',
               fontWeight: '600',
               fontSize: '1rem',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
             }}
           >
             Clear
           </button>
         </div>
 
-        {prediction && (
+        {loading && (
+          <div style={{ marginTop: '1rem', fontSize: '1rem', color: '#0f172a', fontWeight: '500' }}>
+            <span className="loader" style={{ display: 'inline-block', marginRight: '8px' }}></span>
+            Getting prediction...
+          </div>
+        )}
+
+        {prediction && !loading && (
           <div style={{ textAlign: 'center', marginTop: '1.5rem', backgroundColor: '#fff', padding: '1rem', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#0f172a' }}>
               Prediction: <span style={{ color: '#2563eb', fontWeight: 'bold' }}>{prediction}</span>
