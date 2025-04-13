@@ -8,47 +8,56 @@ from model import f_forward, generate_wt, sigmoid, back_propagation, train, loss
 
 app = FastAPI()
 
-# Allow all origins (use with caution in production)
+# Allow all origins (CORS setup)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins to make requests
+    allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all HTTP methods, including OPTIONS
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# One-time conversion of input characters to data and labels
+# Prepare training data
 x = [np.array(binary).reshape(1, 30) for binary in letters_binary.values()]
 y = np.array([one_hot_labels[chr(i + 65)] for i in range(26)])
 
-# Load weights and accuracy using joblib, or train and save
-if os.path.exists("weights.pkl"):
-    data = joblib.load("weights.pkl")
-    if len(data) == 2:
-        w1, w2 = data
-        saved_accuracy = 0.0
-    else:
-        w1, w2, saved_accuracy = data
+# Load or train model weights
+weights_file = "weights.pkl"
+if os.path.exists(weights_file):
+    try:
+        data = joblib.load(weights_file)
+        if len(data) == 2:
+            w1, w2 = data
+            saved_accuracy = 0.0
+        else:
+            w1, w2, saved_accuracy = data
+    except Exception as e:
+        print(f"Failed to load weights: {e}")
+        w1 = generate_wt(30, 5)
+        w2 = generate_wt(5, 26)
+        w1, w2, accuracy, _ = train(x, y, w1, w2, learning_rate=0.01, epochs=100000)
+        saved_accuracy = accuracy
+        joblib.dump((w1, w2, saved_accuracy), weights_file)
 else:
     w1 = generate_wt(30, 5)
     w2 = generate_wt(5, 26)
-    w1, w2, accuracy, losses = train(x, y, w1, w2, learning_rate=0.01, epochs=100000)
+    w1, w2, accuracy, _ = train(x, y, w1, w2, learning_rate=0.01, epochs=100000)
     saved_accuracy = accuracy
-    joblib.dump((w1, w2, saved_accuracy), "weights.pkl")
+    joblib.dump((w1, w2, saved_accuracy), weights_file)
 
-# API input model
+# Request model
 class BinaryInput(BaseModel):
-    data: list  # list of 30 binary integers
+    data: list  # Should contain 30 binary values
 
+# Prediction endpoint
 @app.post("/predict")
 def predict_letter(input: BinaryInput):
     if len(input.data) != 30:
         raise HTTPException(status_code=400, detail="Input must be 30 binary values")
 
     x_input = np.array(input.data).reshape(1, 30)
-
-    # Feedforward prediction
     output = f_forward(x_input, w1, w2)
+
     predicted_index = int(np.argmax(output))
     predicted_char = chr(predicted_index + 65)
 
