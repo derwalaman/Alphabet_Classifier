@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np
-from model import f_forward, generate_wt, sigmoid, back_propagation, train, loss, one_hot_labels, letters_binary, predict as user_predict
-import pickle
+import joblib
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from model import f_forward, generate_wt, sigmoid, back_propagation, train, loss, one_hot_labels, letters_binary
 
 app = FastAPI()
 
@@ -21,24 +21,20 @@ app.add_middleware(
 x = [np.array(binary).reshape(1, 30) for binary in letters_binary.values()]
 y = np.array([one_hot_labels[chr(i + 65)] for i in range(26)])
 
-# Load weights and accuracy if they exist, else train, save them
+# Load weights and accuracy using joblib, or train and save
 if os.path.exists("weights.pkl"):
-    with open("weights.pkl", "rb") as f:
-        data = pickle.load(f)
-        if len(data) == 2:
-            # If only weights are loaded (older pickle file), assume no accuracy and set a default
-            w1, w2 = data
-            saved_accuracy = 0.0  # Default accuracy if it's not present in the pickle file
-        elif len(data) == 3:
-            # If weights and accuracy are loaded
-            w1, w2, saved_accuracy = data
+    data = joblib.load("weights.pkl")
+    if len(data) == 2:
+        w1, w2 = data
+        saved_accuracy = 0.0
+    else:
+        w1, w2, saved_accuracy = data
 else:
     w1 = generate_wt(30, 5)
     w2 = generate_wt(5, 26)
     w1, w2, accuracy, losses = train(x, y, w1, w2, learning_rate=0.01, epochs=100000)
     saved_accuracy = accuracy
-    with open("weights.pkl", "wb") as f:
-        pickle.dump((w1, w2, saved_accuracy), f)
+    joblib.dump((w1, w2, saved_accuracy), "weights.pkl")
 
 # API input model
 class BinaryInput(BaseModel):
@@ -51,20 +47,13 @@ def predict_letter(input: BinaryInput):
 
     x_input = np.array(input.data).reshape(1, 30)
 
-    # Use user's custom predict function (modification to return result instead of print/show)
+    # Feedforward prediction
     output = f_forward(x_input, w1, w2)
-    maxm = 0
-    k = 0
-
-    for i in range(len(output[0])):
-        if output[0][i] > maxm:
-            maxm = output[0][i]
-            k = i
-
-    predicted_char = chr(k + 65)
+    predicted_index = int(np.argmax(output))
+    predicted_char = chr(predicted_index + 65)
 
     return {
         "prediction": predicted_char,
         "probabilities": output.tolist()[0],
-        "accuracy": saved_accuracy,  # Include the accuracy in the response
+        "accuracy": saved_accuracy,
     }
